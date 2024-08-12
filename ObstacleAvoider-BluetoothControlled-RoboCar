@@ -1,0 +1,161 @@
+#include <AFMotor.h>      // Library for controlling DC motors via Adafruit Motor Shield
+#include <NewTone.h>      // Library for generating tone on a buzzer
+
+// Pin definitions
+const int trigPin = A1;   // Trigger pin for ultrasonic sensor
+const int echoPin  = A0;  // Echo pin for ultrasonic sensor
+const int greenled  = A3; // Pin for green LED
+const int redled  = A4;   // Pin for red LED
+const int buzzer = A5;    // Pin for buzzer
+
+long duration;            // Variable to store duration of the ultrasonic pulse
+int distance;             // Variable to store calculated distance
+
+// Motor initialization with the Adafruit Motor Shield
+AF_DCMotor motor1(1, MOTOR12_1KHZ); // Motor 1 (Channel 1)
+AF_DCMotor motor2(2, MOTOR12_1KHZ); // Motor 2 (Channel 2)
+AF_DCMotor motor3(3, MOTOR34_1KHZ); // Motor 3 (Channel 3)
+AF_DCMotor motor4(4, MOTOR34_1KHZ); // Motor 4 (Channel 4)
+
+char command; // Variable to store incoming commands via serial
+
+void setup() {       
+  pinMode(trigPin, OUTPUT);   // Set trigPin as an OUTPUT
+  pinMode(echoPin, INPUT);    // Set echoPin as an INPUT
+  pinMode(buzzer, OUTPUT);    // Set buzzer pin as an OUTPUT
+  pinMode(greenled, OUTPUT);  // Set green LED pin as an OUTPUT
+  pinMode(redled, OUTPUT);    // Set red LED pin as an OUTPUT
+
+  Serial.begin(9600);         // Initialize serial communication at 9600 baud rate
+  
+  // Set initial motor speeds
+  motor1.setSpeed(150);
+  motor2.setSpeed(150);
+  motor3.setSpeed(150);
+  motor4.setSpeed(150);
+}
+
+void loop() {
+  // Trigger the ultrasonic sensor
+  digitalWrite(trigPin, LOW); 
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH); 
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  
+  // Measure pulse duration from the ultrasonic sensor
+  duration = pulseIn(echoPin, HIGH);
+  
+  // Calculate the distance based on the duration of the pulse
+  distance = duration * 0.034 / 2;
+  Serial.print("Distance: ");
+  Serial.println(distance);
+  
+  if (distance > 20) { // If distance is greater than 20 cm
+    digitalWrite(greenled, HIGH); // Turn on green LED
+    digitalWrite(redled, LOW);    // Turn off red LED
+    
+    command = Serial.read(); // Read the command from serial input
+    
+    // Execute corresponding motor actions based on the command
+    switch (command) {
+      case 'F':  // Forward
+        forward();
+        break;
+      case 'B':  // Backward
+        back();
+        break;
+      case 'L':  // Left turn
+        left();
+        break;
+      case 'R':  // Right turn
+        right();
+        break;
+      case 'S':  // Stop
+        Stop();
+        break;
+      case 'H':  // Horn
+        horn();
+        break;
+    } 
+  } else { // If distance is less than or equal to 20 cm
+    digitalWrite(redled, HIGH); // Turn on red LED
+    delay(200);
+    digitalWrite(greenled, LOW); // Turn off green LED
+    
+    // Execute emergency avoidance behavior
+    back();
+    delay(1000);
+    right();
+    delay(500);
+    forward();
+    delay(500); 
+  }
+}
+
+// Function to move the robot forward
+void forward() {
+  motor1.setSpeed(150); 
+  motor1.run(FORWARD); 
+  motor2.setSpeed(150); 
+  motor2.run(FORWARD); 
+  motor3.setSpeed(150);
+  motor3.run(FORWARD); 
+  motor4.setSpeed(150);
+  motor4.run(FORWARD); 
+}
+
+// Function to move the robot backward
+void back() {
+  motor1.setSpeed(150); 
+  motor1.run(BACKWARD); 
+  motor2.setSpeed(150); 
+  motor2.run(BACKWARD); 
+  motor3.setSpeed(150); 
+  motor3.run(BACKWARD); 
+  motor4.setSpeed(150); 
+  motor4.run(BACKWARD); 
+}
+
+// Function to turn the robot left
+void left() {
+  motor1.setSpeed(120); 
+  motor1.run(BACKWARD); 
+  motor2.setSpeed(120); 
+  motor2.run(BACKWARD); 
+  motor3.setSpeed(120); 
+  motor3.run(FORWARD);  
+  motor4.setSpeed(120); 
+  motor4.run(FORWARD);  
+}
+
+// Function to turn the robot right
+void right() {
+  motor1.setSpeed(120); 
+  motor1.run(FORWARD); 
+  motor2.setSpeed(120); 
+  motor2.run(FORWARD); 
+  motor3.setSpeed(120); 
+  motor3.run(BACKWARD); 
+  motor4.setSpeed(120); 
+  motor4.run(BACKWARD); 
+}
+
+// Function to stop all motors
+void Stop() {
+  motor1.setSpeed(0); 
+  motor1.run(RELEASE); 
+  motor2.setSpeed(0); 
+  motor2.run(RELEASE); 
+  motor3.setSpeed(0); 
+  motor3.run(RELEASE); 
+  motor4.setSpeed(0); 
+  motor4.run(RELEASE); 
+}
+
+// Function to sound the horn
+void horn() {
+  NewTone(A5, 600); // Play tone at 600 Hz
+  delay(200);       // Duration of the tone
+  noNewTone();      // Stop playing the tone
+}
